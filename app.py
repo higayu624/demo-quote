@@ -11,30 +11,54 @@ from excel_export import (COLUMNS, build_estimate_from_rows, rows_from_shiage,
 from extractor import extract_shiage, extract_tategu, pdf_to_images
 
 st.set_page_config(page_title="見積もりAI", page_icon="📐", layout="wide")
+
+
+def _secret(name: str) -> str:
+    try:
+        return st.secrets.get(name, "") or os.environ.get(name, "")
+    except Exception:
+        return os.environ.get(name, "")
+
+
+# パスコードゲート(Secretsに APP_PASSCODE がある場合のみ有効)
+_passcode = _secret("APP_PASSCODE")
+if _passcode:
+    if not st.session_state.get("authed"):
+        pw = st.text_input("パスコード", type="password")
+        if pw == _passcode:
+            st.session_state.authed = True
+            st.rerun()
+        st.stop()
+
 st.title("📐 見積もりAI")
 
 with st.sidebar:
     provider = st.radio("AI", ["gemini", "claude"], horizontal=True)
     key_env = "GEMINI_API_KEY" if provider == "gemini" else "ANTHROPIC_API_KEY"
-    api_key = st.text_input("API Key", type="password",
-                            value=os.environ.get(key_env, ""))
+    api_key = st.text_input("API Key", type="password", value=_secret(key_env))
     company = st.text_input("宛名", value="株式会社サンプル工務店")
 
 if "rows" not in st.session_state:
     st.session_state.rows = []  # 見積明細行(区分つき)
 
 # ---------- 1. アップロード ----------
-uploaded = st.file_uploader("図面", type=["pdf", "png", "jpg", "jpeg"])
+input_mode = st.radio("入力", ["ファイル", "カメラ"], horizontal=True, label_visibility="collapsed")
 
 image = None
-if uploaded:
-    if uploaded.type == "application/pdf":
-        pages = pdf_to_images(uploaded.read())
-        page_no = st.number_input("対象ページ", 1, len(pages), 1) - 1
-        image = pages[page_no]
-    else:
-        image = uploaded.read()
-    st.image(image, width=450)
+if input_mode == "ファイル":
+    uploaded = st.file_uploader("図面", type=["pdf", "png", "jpg", "jpeg"])
+    if uploaded:
+        if uploaded.type == "application/pdf":
+            pages = pdf_to_images(uploaded.read())
+            page_no = st.number_input("対象ページ", 1, len(pages), 1) - 1
+            image = pages[page_no]
+        else:
+            image = uploaded.read()
+        st.image(image, width=450)
+else:
+    shot = st.camera_input("図面を撮影")
+    if shot:
+        image = shot.read()
 
 # ---------- 2. 拾い出し ----------
 doc_type = st.radio("表の種類", ["建具表", "仕上表"], horizontal=True)

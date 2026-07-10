@@ -36,3 +36,25 @@ unit_prices.csv 単価マスタ(ダミー)
 
 - 平面図からの面積自動算出は未対応(精度リスク)。求積表・仕上表の記載面積を読む設計
 - 数量・単価は必ず人が確認する前提のツール
+
+
+## 本番デプロイ(Streamlit Community Cloud)
+
+1. GitHubにprivateリポジトリを作りpush
+   ```bash
+   cd hiroidashi-demo
+   git init && git add -A && git commit -m "demo"
+   git remote add origin https://github.com/<user>/hiroidashi-demo.git
+   git push -u origin main
+   ```
+2. https://share.streamlit.io → Sign in with GitHub → New app → リポジトリ/ブランチ/app.pyを指定 → Deploy
+3. App settings → Secrets に以下を設定:
+   ```toml
+   GEMINI_API_KEY = "AIza..."
+   APP_PASSCODE = "好きな合言葉"
+   ```
+4. 発行された https://◯◯.streamlit.app にスマホからアクセス
+
+- APP_PASSCODEを設定すると起動時にパスコード入力を要求(未設定ならゲート無し)
+- スマホでは入力を「カメラ」に切り替えると紙図面をその場で撮影→拾い出しできる
+- 無料枠はスリープするので商談前に一度アクセスして起動しておくこと
